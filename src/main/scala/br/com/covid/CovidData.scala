@@ -1,11 +1,11 @@
-import org.apache.spark.sql.{SaveMode, SparkSession}
-import org.apache.spark.sql.functions._
+package br.com.covid
+
+import org.apache.spark.sql.functions.{col, format_number, struct, to_json}
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.{SaveMode, SparkSession}
 
 object CovidData {
-  def main(args: Array[String]): Unit = {
-
-    val spark = SparkSession.builder().enableHiveSupport().getOrCreate()
+  def apply(spark: SparkSession): Unit = {
 
     spark.sqlContext.setConf("hive.exec.dynamic.partition", "true")
     spark.sqlContext.setConf("hive.exec.dynamic.partition.mode", "nonstrict")
@@ -44,7 +44,8 @@ object CovidData {
     spark.sql("drop table if exists recuperados")
     spark.sql("create table recuperados as select * from tempRecuperados")
 
-    val casos = spark.sql("""
+    val casos = spark.sql(
+      """
       select casosAcumulado as Acumulado,
       casosNovos as Novos,
       casosAcumulado/(populacaoTCU2019/100000) as Incidencia
@@ -57,7 +58,8 @@ object CovidData {
 
     casos.write.format("parquet").mode(SaveMode.Overwrite).save("/user/covid_data/casos")
 
-    val obitos = spark.sql("""
+    val obitos = spark.sql(
+      """
       select obitosAcumulado as Obitos,
       obitosNovos as ObitosNovos,
       obitosAcumulado/(populacaoTCU2019/100000) as Mortalidade,
@@ -78,7 +80,8 @@ object CovidData {
       .save()
 
 
-    val resumo_estado = spark.sql("""
+    val resumo_estado = spark.sql(
+      """
       select regiao, estado,
       casosAcumulado as casos,
       obitosAcumulado as obitos,
@@ -92,7 +95,8 @@ object CovidData {
       .withColumn("Mortalidade", format_number(col("Mortalidade"), 1))
       .withColumn("Incidencia", format_number(col("Incidencia"), 1))
 
-    val resumo_regiao = spark.sql("""
+    val resumo_regiao = spark.sql(
+      """
       select regiao, null as estado,
       sum(casosAcumulado) as casos,
       sum(obitosAcumulado) as obitos,
@@ -115,7 +119,7 @@ object CovidData {
 
     obitos.write
       .format("org.elasticsearch.spark.sql")
-      .option("es.nodes.wan.only","true")
+      .option("es.nodes.wan.only", "true")
       .option("es.nodes", esURL)
       .mode("Overwrite")
       .save("obitos")
