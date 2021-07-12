@@ -5,7 +5,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{SaveMode, SparkSession}
 
 object CovidData {
-  def apply(spark: SparkSession): Unit = {
+  def apply(spark: SparkSession, path: String): Unit = {
 
     spark.sqlContext.setConf("hive.exec.dynamic.partition", "true")
     spark.sqlContext.setConf("hive.exec.dynamic.partition.mode", "nonstrict")
@@ -29,7 +29,8 @@ object CovidData {
       .add(StructField("emAcompanhamentoNovos", IntegerType))
       .add(StructField("interior/metropolitana", IntegerType))
 
-    val covidData = spark.read.schema(schema).option("sep", ";").option("header", "true").csv("/user/data/*csv")
+    val covidData = spark.read.schema(schema).option("sep", ";").option("header", "true").csv("file://" + path + "/*.csv")
+    covidData.write.option("sep", ";").option("header", "true").mode("overwrite").csv("/user/data/")
     covidData.createOrReplaceTempView("covid_data")
 
     val recuperados = spark.sql("select " +
